@@ -7,6 +7,8 @@ import dvc.api
 
 with dvc.api.open("Number",
                   "https://dagshub.com/kingabzpro/Speech_Commands_Dataset/src/master") as dataset:
+    
+    # import dataset
     def getLabel(path = dataset):
         labels = os.listdir(path)
         label_indices = np.arange(0, len(labels))
@@ -16,5 +18,5 @@ with dvc.api.open("Number",
     def wav2mfcc(filePath, maxPadLen = 11):
         wave, sr = librosa.load(filePath, mono = True, sr = None)
         wave = wave[::3]
-        
+
         return
