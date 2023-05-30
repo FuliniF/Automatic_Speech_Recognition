@@ -1,5 +1,5 @@
 import os
-from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 from keras.utils import to_categorical
 import numpy as np
 from scipy.io import wavfile
@@ -7,7 +7,9 @@ from scipy.fftpack import dct
 import warnings
 warnings.filterwarnings('ignore')
 
+# path define
 DATA_PATH = "./train/"
+SAVE_PATH = "./npyFile/"
     
 # import dataset
 def getLabel(path = DATA_PATH):
@@ -15,7 +17,7 @@ def getLabel(path = DATA_PATH):
     label_indices = np.arange(0, len(labels))
     return labels, label_indices, to_categorical(label_indices)
 
-# .wav to fbank
+# .wav file to fbank feature(not normalized)
 def wav2fbank(filePath):
     # load data
     sampleRate, signal = wavfile.read(filePath)
@@ -68,9 +70,8 @@ def wav2fbank(filePath):
 
     return filterBank
 
-# .wav to mfcc
-def wav2mfcc(filePath, numCepstral = 12):
-    fbank = wav2fbank(filePath)
+# wav file to mfcc feature(not normalized)
+def wav2mfcc(fbank, numCepstral = 12):
     mfcc = dct(fbank, type = 2, axis = 1, norm = "ortho")[ : , 1 : (numCepstral + 1)]
     cepLifter = 23
     (nframes, ncoeff) = mfcc.shape
@@ -80,55 +81,169 @@ def wav2mfcc(filePath, numCepstral = 12):
 
     return mfcc
 
-def save_data(feature_type, path = DATA_PATH):
-    labels, _, _ = getLabel()
-    if feature_type == "mfcc":
-        for label in labels:
-            vectors = []
-            wavfiles = [path + label + "/" + wavfile for wavfile in os.listdir(path + "/" + label)]
-            for wavfile in wavfiles:
-                mfcc = wav2mfcc(wavfile)
-                # normalize
-                mfcc = (mfcc - (np.mean(mfcc, axis = 0) + 1e-8)) / np.std(mfcc, axis = 0)
-                vectors.append(mfcc)
-        
-            np.save(label + "_mfcc", vectors, allow_pickle=True)
+def save_data(loadPath = DATA_PATH, savePath = SAVE_PATH):
+    """
+    Create npy files to store the features of datasets.
+    Doesn't need to run this function if there is no change in dataset.
 
-    elif feature_type == "fbank":
-        for label in labels:
-            vectors = []
-            wavfiles = [path + label + "/" + wavfile for wavfile in os.listdir(path + "/" + label)]
-            for wavfile in  wavfiles:
-                fbank = wav2fbank(wavfile)
-                # normalize
-                fbank = (fbank - (np.mean(fbank, axis = 0) + 1e-8)) / np.std(fbank, axis = 0)
-                vectors.append(fbank)
+    ### input
+        - loadPath : string
+
+            path to the dictionary where stores the dataset
+
+        - savePath : string
+
+            path to the dictionary where stores the finished npy files
+
+    ### output
+        This function has no output
+    """
+
+    labels, _, _ = getLabel()
+
+    for label in labels:
+        fbankVectors = []
+        mfccVectors = []
+        wavfiles = [loadPath + label + "/" + wavfile for wavfile in os.listdir(loadPath + "/" + label)]
+        for wavfile in  wavfiles:
+            fbank = wav2fbank(wavfile)
+            mfcc = wav2mfcc(fbank)
+            # normalize
+            fbank = (fbank - (np.mean(fbank, axis = 0) + 1e-8)) / np.std(fbank, axis = 0)
+            mfcc = (mfcc - (np.mean(mfcc, axis = 0) + 1e-8)) / np.std(mfcc, axis = 0)
+
+            fbankVectors.append(fbank)
+            mfccVectors.append(mfcc)
                 
-            np.save(label + "_fbank.npy", vectors, allow_pickle=True)
+        np.save(savePath + label + "_fbank", fbankVectors, allow_pickle=True)
+        np.save(savePath + label + "_mfcc", mfccVectors, allow_pickle=True)
 
     return
 
+def getFbank(dataPath):
+    """
+    Convert one wav file to fbank feature.
 
-# def get_train_test(feature_type, splitRatio = 0.6, randomState = 42):
-#     labels, indices, _ = getLabel()
-#     # print(labels)
+    ### input
+        - dataPath : string
 
-#     X = np.load(labels[0] + "_" + feature_type + ".npy", allow_pickle= True)
-#     print(X)
-#     y = np.zeros(X.shape[0])
+            ata path to the target wav file
 
-#     for i, label in enumerate(labels[1 : ]):
-#         x = np.load(label + "_" + feature_type + '.npy', allow_pickle=True)
-#         X = np.vstack((X, x))
-#         y = np.append(y, np.full(x.shape[0], fill_value= (i + 1)))
+    ### output
+        - np 2d array
 
-#     assert X.shape[0] == len(y)
+            a normalized fbank feature
+    """
 
-#     return train_test_split(X, y, test_size= (1 - splitRatio), random_state=randomState, shuffle=True)
+    fbank = wav2fbank(dataPath)
+    return (fbank - (np.mean(fbank, axis = 0) + 1e-8)) / np.std(fbank, axis = 0)
 
+def getMFCC(dataPath):
+    """
+    Convert one wav file to mfcc feature.
+
+    ### input
+        - dataPath : string
+
+            data path to the target wav file
+
+    ### output
+        - np 2d array
+
+            a normalized mfcc feature
+    """
+
+    fbank = wav2fbank(dataPath)
+    mfcc = wav2mfcc(fbank)
+    return (mfcc - (np.mean(mfcc, axis = 0) + 1e-8)) / np.std(mfcc, axis = 0)
+
+def getTrainTest(feature_type, splitRatio = 0.05, seed = 2023):
+    """
+    Generate training and testing datasets from the features in npy files.
+
+    ### input
+        - feature_type : string
+
+            Input "mfcc" for getting mfcc feature datasets and "fbank" for fbank feature datasets.
+
+        - splitRatio : float in [0, 1]
+
+            number of test data devided by number of hole data
+
+        - seed : int
+
+            random seed
+
+    ### output (in order)
+        - trainX : np 3d array
+
+            a training data array containing 2d-arrayed features
+
+        - testX : np 3d array
+
+            a training data array containing 2d-arrayed features
+
+        - trainY : np 1d array
+
+            an array storing labels of trainX
+
+        - testY : np 1d array
+
+            an array storing labels of testX
+    """
+
+    labels, _, _ = getLabel()
+    np.random.seed(seed)
+
+    X = np.load(SAVE_PATH + labels[0] + "_" + feature_type + '.npy', allow_pickle=True)
+    testSize = int(X.shape[0] * splitRatio)
+
+    testIndices = np.random.choice(X.shape[0], size = testSize, replace = False, p = None)
+    testY = np.full(testSize, labels[0])
+    trainY = np.full(X.shape[0] - testSize, labels[0])
+    testX = np.array([X[testIdx] for testIdx in testIndices])
+    trainX = np.array([X[i] for i in range(X.shape[0]) if i not in testIndices])
+
+    for label in labels[1 : ]:
+        X = np.load(SAVE_PATH + label + "_" + feature_type + '.npy', allow_pickle=True)
+        testSize = int(X.shape[0] * splitRatio)
+        testIndices = np.random.choice(X.shape[0], size = testSize, replace = False, p = None)
+        testY = np.append(testY, np.full(testSize, label))
+        trainY = np.append(trainY, np.full(X.shape[0] - testSize, label))
+        testX = np.hstack((testX, np.array([X[testIdx] for testIdx in testIndices])))
+        trainX = np.hstack((trainX, np.array([X[i] for i in range(X.shape[0]) if i not in testIndices])))
+
+    
+    trainX, trainY = shuffle(trainX, trainY, random_state=seed)
+    testX, testY = shuffle(testX, testY, random_state=seed)
+
+    return trainX, testX, trainY, testY
+
+def getBatchWindow(dataset):
+    """
+    Get the batch size and window size of a dataset for rnn input.
+
+    ### input
+        - dataset : np 3d array
+
+            the input feature array
+
+    ### output (in order)
+        - batch size : int
+
+            number of features in the array
+
+        - window size : int
+
+            maximum size of the features in the array
+
+    """
+
+    return len(dataset), max(dataset[i].size for i in range(len(dataset)))
+# compute features
+# save_data()
 
 # test
-# feature_type = "fbank"
-# save_data(feature_type)
-# npyRead = np.load("down_mfcc.npy", allow_pickle=True)
-# print(npyRead.shape())
+feature_type = "mfcc"
+trainX, testX, trainY, testY = getTrainTest(feature_type)
+print(getBatchWindow(testX))
