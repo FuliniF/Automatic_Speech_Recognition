@@ -240,10 +240,11 @@ def getBatchWindow(dataset):
     """
 
     return len(dataset), max(dataset[i].size for i in range(len(dataset)))
+
 # compute features
 # save_data()
 
 # test
-feature_type = "mfcc"
-trainX, testX, trainY, testY = getTrainTest(feature_type)
-print(getBatchWindow(testX))
+# feature_type = "mfcc"
+# trainX, testX, trainY, testY = getTrainTest(feature_type)
+# print(getBatchWindow(testX))
