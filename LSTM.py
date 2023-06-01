@@ -93,7 +93,9 @@ class RecognitionRNN(object):
 
 if __name__ == "__main__":
     numNeuron = [128, 64]
-    x_input = tf.placeholder(tf.float32, [12000, 128, 2]) 
+    trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
+    batchSize, windowSize = preprocess.getBatchWindow(trainX)
+    x_input = tf.placeholder(tf.float32, [batchSize, windowSize, 2]) 
     keep_prob = 0.8 
     cell, init_state = LSTMCell(numNeuron, x_input, len(numNeuron), keep_prob)
 
