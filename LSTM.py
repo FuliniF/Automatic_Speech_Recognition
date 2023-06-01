@@ -1,6 +1,7 @@
 import tensorflow.compat.v1 as tf
 import preprocess
 tf.disable_v2_behavior()
+import numpy as np
 
 # function "getCell"
 """
@@ -32,7 +33,7 @@ step:
 1. create an LSTM cell of the specified size
 """
 def LSTMCell(numNeuron, X, numLayer, keep_prob):    
-    cell = tf.nn.rnn_cell.MultiRNNCell([getCell(n, keep_prob) for n in (numNeuron)])
+    cell = tf.nn.rnn_cell.MultiRNNCell([getCell(n, keep_prob) for n in numNeuron])
     init_state = cell.zero_state(tf.shape(X)[0], tf.float32)
     return cell, init_state
 
@@ -76,34 +77,54 @@ def opt_loss(output, targets, learning_rate):
 
 class RecognitionRNN(object):
     
-    def __init__(self, learning_rate=0.8, batch_size=7, hidden_layer_size=512, number_of_layers=2, 
-                 dropout=True, keep_prob=0.8, size=10, gradient_clip_margin=4, window_size=7):
+    def __init__(self, batch_size, window_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
+                 dropout=True, keep_prob=0.8, size=12, gradient_clip_margin=4):
     
-        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, 1], name='input_data')
-        self.targets = tf.placeholder(tf.float32, [batch_size, 1], name='targets')
+        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, 2], name='input_data')
+        self.targets = tf.placeholder(tf.float32, [batch_size, 12], name='targets')
 
-        cell, init_state = LSTMCell(hidden_layer_size, batch_size, number_of_layers, dropout, keep_prob)
+        # cell, init_state = LSTMCell(hidden_layer_size, batch_size, number_of_layers, dropout, keep_prob)
+        cell, init_state = LSTMCell(numNeuron, self.inputs, len(numNeuron), keep_prob)
 
         outputs, states = tf.nn.dynamic_rnn(cell, self.inputs, initial_state=init_state)
 
-        self.logits = outLayer(outputs, hidden_layer_size, size)
+        self.logits = outLayer(outputs, size)
 
-        self.loss, self.opt = opt_loss(self.logits, self.targets, learning_rate, gradient_clip_margin)
+        self.loss, self.opt = opt_loss(self.logits, self.targets, learning_rate)
 
 
 if __name__ == "__main__":
     numNeuron = [128, 64]
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
     batchSize, windowSize = preprocess.getBatchWindow(trainX)
-    x_input = tf.placeholder(tf.float32, [batchSize, windowSize, 2]) 
-    keep_prob = 0.8 
-    cell, init_state = LSTMCell(numNeuron, x_input, len(numNeuron), keep_prob)
+    print("trainX : ", trainX.shape)
+    # x_input = tf.placeholder(tf.float32, [batchSize, windowSize, 2]) 
+    # cell, init_state = LSTMCell(numNeuron, x_input, len(numNeuron), keep_prob)
 
-    lstmOut, final_state = tf.nn.dynamic_rnn(cell, x_input, initial_state=init_state)
+    # lstmOut, final_state = tf.nn.dynamic_rnn(cell, x_input, initial_state=init_state)
+    # preds = outLayer(lstmOut, 10)
+    # y_out = tf.placeholder(tf.float32, [batchSize, 1])
+    # loss, opt = opt_loss(preds, y_out, 0.8) 
 
-    preds = outLayer(lstmOut, 10)
+    model = RecognitionRNN(batchSize, windowSize)
 
-    y_out = tf.placeholder(tf.float32, [None, 10])
-    loss, opt = opt_loss(preds, y_out, 0.8) 
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
 
-    model = RecognitionRNN()
+        num_epochs = 10
+        for epoch in range(num_epochs):
+            total_loss = 0
+            num_batches = len(trainX) // batchSize
+
+            for batch in range(num_batches):
+                start_idx = batch * batchSize
+                end_idx = start_idx + batchSize
+
+                batch_X = trainX[start_idx:end_idx]
+                batch_Y = trainY[start_idx:end_idx]
+
+                _, loss = sess.run([model.opt, model.loss], feed_dict={model.inputs: batch_X, model.targets: batch_Y})
+                total_loss += loss
+
+            avg_loss = total_loss / num_batches
+            print("Epoch:", epoch+1, "Loss:", avg_loss)
