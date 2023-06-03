@@ -2,6 +2,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Dropout
+from keras import backend as K
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,18 +13,18 @@ if __name__ == "__main__":
     print("--------------------------------------------------------")
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
     batchSize, windowSize = preprocess.getBatchWindow(trainX)
-    print(trainX.shape)
-    # trainX = np.asarray(np.array(trainX, ndmin = 2)).astype(np.float32)
-    # trainY = np.asarray(np.array(trainY, ndmin = 2)).astype(np.float32)
-    trainX = np.reshape(trainX, (trainX.shape[0], windowSize, 2))
-    trainY = np.reshape(trainY, (trainY.shape[0], windowSize, 2))
-    print("!!!",batchSize, windowSize)
+    # trainX = np.asarray(np.array(trainX)).astype(np.float32)
+    # trainY = np.asarray(trainY).astype(np.float32)
+    trainX = K.cast_to_floatx(trainX) # tf.convert_to_tensor(trainX)
+    trainY = K.cast_to_floatx(trainY) # tf.convert_to_tensor(trainY)
+    # trainX = np.stack(trainX)
+    print("X: ",np.array(trainX).dtype)
 
     # Initialising the RNN
     model = Sequential()
 
     # Adding the LSTM layers and some Dropout regularisation
-    model.add(LSTM(units = 50, return_sequences = True, batch_input_shape = (trainX.shape)))
+    model.add(LSTM(units = 50, return_sequences = True, batch_input_shape = (trainX.shape[0], windowSize, 2)))
     model.add(Dropout(0.2))
     model.add(LSTM(units = 50, return_sequences = True))
     model.add(Dropout(0.2))
@@ -37,7 +38,7 @@ if __name__ == "__main__":
 
     # Compile & train & predict
     model.compile(optimizer = 'adam', loss = 'mean_squared_error')
-    hist = model.fit(trainX, trainY, epochs = 100, batch_size = batchSize)
+    hist = model.fit(np.array(trainX), np.array(trainY), epochs = 5, batch_size = batchSize)
     # predicted = model.predict(np.array(testX))
 
     # plot
