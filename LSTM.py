@@ -79,7 +79,6 @@ class RecognitionRNN(object):
     
     def __init__(self, batch_size, window_size, imbed_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
                  dropout=True, keep_prob=0.8, size=1, gradient_clip_margin=4):
-    
         self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, imbed_size], name='input_data')
         self.targets = tf.placeholder(tf.float32, [batch_size, 1], name='targets')
 
@@ -94,6 +93,9 @@ class RecognitionRNN(object):
 
 
 if __name__ == "__main__":
+    # print("compute fetures")
+    # preprocess.save_data()
+    # print("feature complete")
     numNeuron = [128, 64]
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
     batchSize, windowSize, imbedSize = preprocess.getBatchWindow(trainX)
@@ -108,40 +110,60 @@ if __name__ == "__main__":
 
     model = RecognitionRNN(batchSize, windowSize, imbedSize)
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+    # with tf.Session() as sess:
+    #     sess.run(tf.global_variables_initializer())
 
-        num_epochs = 10
-        for epoch in range(num_epochs):
-            total_loss = 0
-            traind_scores = []
-            num_batches = len(trainX) // batchSize
+    #     num_epochs = 10
+    #     for epoch in range(num_epochs):
+    #         total_loss = 0
+    #         traind_scores = []
+    #         num_batches = len(trainX) // batchSize
 
-            for batch in range(num_batches):
-                start_idx = batch * batchSize
-                end_idx = start_idx + batchSize
+    #         for batch in range(num_batches):
+    #             start_idx = batch * batchSize
+    #             end_idx = start_idx + batchSize
 
-                batch_X = trainX[start_idx:end_idx]
-                batch_Y = trainY[start_idx:end_idx]
+    #             batch_X = trainX[start_idx:end_idx]
+    #             batch_Y = trainY[start_idx:end_idx]
 
-                o, loss = sess.run([model.logits, model.loss], feed_dict={model.inputs: batch_X, model.targets: batch_Y})
-                total_loss += loss
-                traind_scores.append(o)
+    #             o, loss = sess.run([model.logits, model.loss], feed_dict={model.inputs: batch_X, model.targets: batch_Y})
+    #             total_loss += loss
+    #             traind_scores.append(o)
 
-            avg_loss = total_loss / num_batches
-            print("Epoch:", epoch+1, "Loss:", avg_loss)
+    #         avg_loss = total_loss / num_batches
+    #         print("Epoch:", epoch+1, "Loss:", avg_loss)
+
+    session =  tf.Session()
+    session.run(tf.global_variables_initializer())
+    epochs = 10
+    for i in range(epochs):
+        traind_scores = []
+        ii = 0
+        epoch_loss = []
+        while(ii + batchSize) <= len(trainX):
+            X_batch = trainX[ii:ii+batchSize]
+            y_batch = trainY[ii:ii+batchSize]
+        
+            o, c, _ = session.run([model.logits, model.loss, model.opt], feed_dict={model.inputs:X_batch, model.targets:y_batch})
+        
+            epoch_loss.append(c)
+            traind_scores.append(o)
+            ii += batchSize
+        
+        print('Epoch {}/{}'.format(i, epochs), ' Current loss: {}'.format(np.mean(epoch_loss)))
 
     # Define the class labels
     labels = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'up', 'down']
 
     # Extract features from the preprocessed audio
-    audio_features = preprocess.getMFCC(testX)
+    audio_features = preprocess.getMFCC("audio/spec_test/clip_05.wav")
 
     # Reshape the features if necessary (according to your model's input shape)
-    audio_features = audio_features.reshape(1, -1)  # Reshape to (1, feature_dim)
+    # audio_features = audio_features.reshape(1, -1)  # Reshape to (1, feature_dim)
 
     # Feed the features to the trained model and obtain the prediction
-    prediction = model.predict(audio_features)
+    # prediction = model.predict(audio_features)
+    prediction = session.run([model.logits], feed_dict={model.inputs:audio_features})
 
     # Interpret the prediction
     print("Predicted word:", labels[np.argmax(prediction)])
