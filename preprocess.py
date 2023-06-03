@@ -1,6 +1,7 @@
 import os
 from sklearn.utils import shuffle
 from keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
 import numpy as np
 from scipy.io import wavfile
 from scipy.fftpack import dct
@@ -21,7 +22,14 @@ def getLabel(path = DATA_PATH):
 def wav2fbank(filePath):
     # load data
     sampleRate, signal = wavfile.read(filePath)
-    signal = signal[0 : int(3.5 * sampleRate)]
+    maxFrameLen = sampleRate
+    signal = signal[0 : int(sampleRate)]
+    # print(type(signal))
+    # print("original len : ", len(signal), maxFrameLen)
+    # print(np.zeros(maxFrameLen - len(signal)))
+    signal = np.append(signal, np.zeros(maxFrameLen - len(signal)))
+    # print("frame len : ", len(signal), "frame : ", signal)
+    # os.system("pause")
 
     # pre-emphasis
     preEmphasis = 0.97
@@ -81,7 +89,7 @@ def wav2mfcc(fbank, numCepstral = 12):
 
     return mfcc
 
-def save_data(loadPath = DATA_PATH, savePath = SAVE_PATH):
+def save_data(loadPath = DATA_PATH, savePath = SAVE_PATH, splitRatio = 0.05, seed = 2023):
     """
     Create npy files to store the features of datasets.
     Doesn't need to run this function if there is no change in dataset.
@@ -100,11 +108,38 @@ def save_data(loadPath = DATA_PATH, savePath = SAVE_PATH):
     """
 
     labels, _, _ = getLabel()
+    print(labels)
 
+    fbankVectors = []
+    mfccVectors = []
+    Y = []
     for label in labels:
-        fbankVectors = []
-        mfccVectors = []
-        wavfiles = [loadPath + label + "/" + wavfile for wavfile in os.listdir(loadPath + "/" + label)]
+        # print(label)
+        if label == "zero":
+            y = 0
+        elif label == "one":
+            y = 1
+        elif label == "two":
+            y = 2
+        elif label == "three":
+            y = 3
+        elif label == "four":
+            y = 4
+        elif label == "five":
+            y = 5
+        elif label == "six":
+            y = 6
+        elif label == "seven":
+            y = 7
+        elif label == "eight":
+            y = 8
+        elif label == "nine":
+            y = 9
+        elif label == "up":
+            y = 10
+        elif label == "down":
+            y = 11
+        wavfiles = [loadPath + label + "/" + wavfile for wavfile in os.listdir(loadPath + label)]
         for wavfile in  wavfiles:
             fbank = wav2fbank(wavfile)
             mfcc = wav2mfcc(fbank)
@@ -114,9 +149,18 @@ def save_data(loadPath = DATA_PATH, savePath = SAVE_PATH):
 
             fbankVectors.append(fbank)
             mfccVectors.append(mfcc)
-                
-        np.save(savePath + label + "_fbank", fbankVectors, allow_pickle=True)
-        np.save(savePath + label + "_mfcc", mfccVectors, allow_pickle=True)
+            Y.append(y)
+
+    
+    fbankTrainX, fbankTestX, mfccTrainX, mfccTestX, TrainY, TestY = train_test_split(np.asarray(fbankVectors), np.asarray(mfccVectors), np.asarray(Y),
+                                                                                      test_size=splitRatio, random_state=seed, shuffle=True)
+    
+    np.save(savePath + "trainX_fbank", np.asarray(fbankTrainX), allow_pickle=True)
+    np.save(savePath + "testX_fbank", np.asarray(fbankTestX), allow_pickle=True)
+    np.save(savePath + "trainX_mfcc", np.asarray(mfccTrainX), allow_pickle=True)
+    np.save(savePath + "testX_mfcc", np.asarray(mfccTestX), allow_pickle=True)
+    np.save(savePath + "trainY", np.asarray(TrainY), allow_pickle=True)
+    np.save(savePath + "testY", np.asarray(TestY), allow_pickle=True)
 
     return
 
@@ -157,7 +201,7 @@ def getMFCC(dataPath):
     mfcc = wav2mfcc(fbank)
     return (mfcc - (np.mean(mfcc, axis = 0) + 1e-8)) / np.std(mfcc, axis = 0)
 
-def getTrainTest(feature_type, splitRatio = 0.05, seed = 2023):
+def getTrainTest(feature_type):
     """
     Generate training and testing datasets from the features in npy files.
 
@@ -192,31 +236,16 @@ def getTrainTest(feature_type, splitRatio = 0.05, seed = 2023):
             an array storing labels of testX
     """
 
-    labels, _, _ = getLabel()
-    np.random.seed(seed)
+    # labels, _, _ = getLabel()
+    # np.random.seed(seed)
 
-    X = np.load(SAVE_PATH + labels[0] + "_" + feature_type + '.npy', allow_pickle=True)
-    testSize = int(X.shape[0] * splitRatio)
-
-    testIndices = np.random.choice(X.shape[0], size = testSize, replace = False, p = None)
-    testY = np.full(testSize, labels[0])
-    trainY = np.full(X.shape[0] - testSize, labels[0])
-    testX = np.array([X[testIdx] for testIdx in testIndices])
-    trainX = np.array([X[i] for i in range(X.shape[0]) if i not in testIndices])
-
-    for label in labels[1 : ]:
-        X = np.load(SAVE_PATH + label + "_" + feature_type + '.npy', allow_pickle=True)
-        testSize = int(X.shape[0] * splitRatio)
-        testIndices = np.random.choice(X.shape[0], size = testSize, replace = False, p = None)
-        testY = np.append(testY, np.full(testSize, label))
-        trainY = np.append(trainY, np.full(X.shape[0] - testSize, label))
-        testX = np.hstack((testX, np.array([X[testIdx] for testIdx in testIndices])))
-        trainX = np.hstack((trainX, np.array([X[i] for i in range(X.shape[0]) if i not in testIndices])))
-
+    trainX = np.load(SAVE_PATH + "trainX_" + feature_type + '.npy', allow_pickle=True)
+    testX = np.load(SAVE_PATH + "testX_" + feature_type + '.npy', allow_pickle=True)
+    trainY = np.load(SAVE_PATH + "trainY.npy", allow_pickle=True)
+    testY = np.load(SAVE_PATH + "testY.npy", allow_pickle=True)
+    trainY= np.expand_dims(trainY, axis = 1)
+    testY= np.expand_dims(testY, axis = 1)
     
-    trainX, trainY = shuffle(trainX, trainY, random_state=seed)
-    testX, testY = shuffle(testX, testY, random_state=seed)
-
     return trainX, testX, trainY, testY
 
 def getBatchWindow(dataset):
@@ -237,14 +266,22 @@ def getBatchWindow(dataset):
 
             maximum size of the features in the array
 
+        - imbed size : int
+
+            dimension of features
+
     """
 
-    return len(dataset), max(dataset[i].size for i in range(len(dataset)))
+    return len(dataset), len(dataset[0]), dataset.shape[2]
 
 # compute features
 # save_data()
 
 # test
-# feature_type = "mfcc"
+# feature_type = "fbank"
+# save_data()
 # trainX, testX, trainY, testY = getTrainTest(feature_type)
-# print(getBatchWindow(testX))
+# _, window, imbed = getBatchWindow(testX)
+# # print(testX[0].shape, testX[300].shape, max(testX[i].shape[0] for i in range(len(testX))) == min(testX[i].shape[0] for i in range(len(testX))))
+# print(testY.shape)
+# print(imbed)
