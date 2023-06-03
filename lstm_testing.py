@@ -9,16 +9,21 @@ import matplotlib.pyplot as plt
 import preprocess
 
 if __name__ == "__main__":
+    print("--------------------------------------------------------")
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
     batchSize, windowSize = preprocess.getBatchWindow(trainX)
-    trainX = np.reshape(trainX, (trainX.shape[0], trainX.shape[1], 1))
-    trainY = np.reshape(trainY, (trainY.shape[0], trainY.shape[1], 1))
+    print(trainX.shape)
+    # trainX = np.asarray(np.array(trainX, ndmin = 2)).astype(np.float32)
+    # trainY = np.asarray(np.array(trainY, ndmin = 2)).astype(np.float32)
+    trainX = np.reshape(trainX, (trainX.shape[0], windowSize, 2))
+    trainY = np.reshape(trainY, (trainY.shape[0], windowSize, 2))
+    print("!!!",batchSize, windowSize)
 
     # Initialising the RNN
     model = Sequential()
 
     # Adding the LSTM layers and some Dropout regularisation
-    model.add(LSTM(units = 50, return_sequences = True, input_shape = (trainX.shape[1:])))
+    model.add(LSTM(units = 50, return_sequences = True, batch_input_shape = (trainX.shape)))
     model.add(Dropout(0.2))
     model.add(LSTM(units = 50, return_sequences = True))
     model.add(Dropout(0.2))
