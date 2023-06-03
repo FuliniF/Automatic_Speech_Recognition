@@ -77,11 +77,11 @@ def opt_loss(output, targets, learning_rate):
 
 class RecognitionRNN(object):
     
-    def __init__(self, batch_size, window_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
-                 dropout=True, keep_prob=0.8, size=12, gradient_clip_margin=4):
+    def __init__(self, batch_size, window_size, imbed_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
+                 dropout=True, keep_prob=0.8, size=1, gradient_clip_margin=4):
     
-        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, 2], name='input_data')
-        self.targets = tf.placeholder(tf.float32, [batch_size, 12], name='targets')
+        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, imbed_size], name='input_data')
+        self.targets = tf.placeholder(tf.float32, [batch_size, 1], name='targets')
 
         # cell, init_state = LSTMCell(hidden_layer_size, batch_size, number_of_layers, dropout, keep_prob)
         cell, init_state = LSTMCell(numNeuron, self.inputs, len(numNeuron), keep_prob)
@@ -96,8 +96,8 @@ class RecognitionRNN(object):
 if __name__ == "__main__":
     numNeuron = [128, 64]
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
-    batchSize, windowSize = preprocess.getBatchWindow(trainX)
-    print("trainX : ", trainX.shape)
+    batchSize, windowSize, imbedSize = preprocess.getBatchWindow(trainX)
+    # print("trainX : ", trainX.shape)
     # x_input = tf.placeholder(tf.float32, [batchSize, windowSize, 2]) 
     # cell, init_state = LSTMCell(numNeuron, x_input, len(numNeuron), keep_prob)
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     # y_out = tf.placeholder(tf.float32, [batchSize, 1])
     # loss, opt = opt_loss(preds, y_out, 0.8) 
 
-    model = RecognitionRNN(batchSize, windowSize)
+    model = RecognitionRNN(batchSize, windowSize, imbedSize)
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
@@ -114,6 +114,7 @@ if __name__ == "__main__":
         num_epochs = 10
         for epoch in range(num_epochs):
             total_loss = 0
+            traind_scores = []
             num_batches = len(trainX) // batchSize
 
             for batch in range(num_batches):
@@ -123,8 +124,34 @@ if __name__ == "__main__":
                 batch_X = trainX[start_idx:end_idx]
                 batch_Y = trainY[start_idx:end_idx]
 
-                _, loss = sess.run([model.opt, model.loss], feed_dict={model.inputs: batch_X, model.targets: batch_Y})
+                o, loss = sess.run([model.logits, model.loss], feed_dict={model.inputs: batch_X, model.targets: batch_Y})
                 total_loss += loss
+                traind_scores.append(o)
 
             avg_loss = total_loss / num_batches
             print("Epoch:", epoch+1, "Loss:", avg_loss)
+
+    sup =[]
+    for i in range(len(traind_scores)):
+        for j in range(len(traind_scores[i])):
+            sup.append(traind_scores[i][j])
+
+    tests = []
+    i = 0
+    while i+batchSize <= len(testX):
+    
+        o = sess.run([model.logits], feed_dict={model.inputs:testX[i:i+batchSize]})
+        i += batchSize
+        tests.append(o)
+
+    tests_new = []
+    for i in range(len(tests)):
+        for j in range(len(tests[i][0])):
+            tests_new.append(tests[i][0][j])
+
+    test_results = []
+    for i in range(11410):
+        if i >= 11401:
+            test_results.append(tests_new[i-11401])
+        else:
+            test_results.append(None)
