@@ -2,7 +2,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Dropout
-from keras import backend as K
+from keras import backend
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     model = Sequential()
 
     # Adding the LSTM layers and some Dropout regularisation
-    model.add(LSTM(units = 50, return_sequences = True, input_shape = (trainX.shape[1],12)))
+    model.add(LSTM(units = 50, return_sequences = True, input_shape = (99,12)))
     model.add(Dropout(0.2))
     model.add(LSTM(units = 50, return_sequences = True))
     model.add(Dropout(0.2))
@@ -33,8 +33,19 @@ if __name__ == "__main__":
     model.add(Dense(units = 12))
 
     # Compile & train & predict
-    model.compile(optimizer = 'adam', loss = 'mean_squared_error')
-    hist = model.fit(np.array(trainX), np.array(trainY), epochs = 5, batch_size = batchSize)
+    ii = 0
+    batch = 114
+    while (ii+batch) <= trainX.shape[0]:
+        print("current iteration:", ii/114)
+        backend.clear_session()
+        X_batch = trainX[ii:ii+batch]
+        Y_batch = trainY[ii:ii+batch]
+        model.compile(optimizer = 'adam', loss = 'mean_squared_error')
+        model.fit(X_batch, Y_batch, epochs = 5, batch_size = batch)
+        ii += batch
+    # backend.clear_session()
+    # model.compile(optimizer = 'adam', loss = 'mean_squared_error')
+    # model.fit(np.array(trainX), np.array(trainY), epochs = 5, batch_size = 100)
 
     predicted = model.predict(testX)
     print("=== prediction ===")
@@ -49,4 +60,5 @@ if __name__ == "__main__":
         if max_index == testY[i]:
             correct += 1
         # print("test", i, ":", max_index)
+    print("correct: ", correct)
     print("accuracy:", correct/600)
