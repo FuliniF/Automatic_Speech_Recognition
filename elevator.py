@@ -67,7 +67,7 @@ def voiceDetect(filename, savePath = "./audio/",
     wf.close()
 
     region = auditok.load(savePath + filename + ".wav")
-    splited = region.split(min_dur = 0.3, max_dur = 1.5, max_silence = 0.1, energy_threshold = 55)
+    splited = region.split(min_dur = 0.3, max_dur = 1.0, max_silence = 0.1, energy_threshold = 55)
     commands = []
     for i, r in enumerate(splited):
         commands.append(r.save(savePath + "command_" + str(i) + ".wav"))
