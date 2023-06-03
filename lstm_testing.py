@@ -35,11 +35,7 @@ if __name__ == "__main__":
     # Compile & train & predict
     model.compile(optimizer = 'adam', loss = 'mean_squared_error')
     hist = model.fit(np.array(trainX), np.array(trainY), epochs = 5, batch_size = batchSize)
-    # print("ok")
-    # for i in range(len(testX[0]/100)):
-    #     tmp_testX = testX[i:i+100]
-    #     predicted = model.predict(tmp_testX)
-    #     print("predicted:",predicted)
+
     predicted = model.predict(testX)
     print("=== prediction ===")
     correct = 0
@@ -54,12 +50,3 @@ if __name__ == "__main__":
             correct += 1
         # print("test", i, ":", max_index)
     print("accuracy:", correct/600)
-    # plot
-    # historydf = pd.DataFrame(hist.history, index = hist.epoch)
-    # # plt.figure(figsize=(8, 6))
-    # historydf.plot(ylim=(0, max(1, historydf.values.max())))
-    # loss = hist.history['loss'][-1]
-    # acc = hist.history['accuracy'][-1]
-    # plt.title('Loss: %.3f, Accuracy: %.3f' % (loss, acc))
-    # plt.savefig("./test.png")
-    # plt.close()
