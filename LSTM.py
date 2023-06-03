@@ -131,27 +131,17 @@ if __name__ == "__main__":
             avg_loss = total_loss / num_batches
             print("Epoch:", epoch+1, "Loss:", avg_loss)
 
-    sup =[]
-    for i in range(len(traind_scores)):
-        for j in range(len(traind_scores[i])):
-            sup.append(traind_scores[i][j])
+    # Define the class labels
+    labels = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'up', 'down']
 
-    tests = []
-    i = 0
-    while i+batchSize <= len(testX):
-    
-        o = sess.run([model.logits], feed_dict={model.inputs:testX[i:i+batchSize]})
-        i += batchSize
-        tests.append(o)
+    # Extract features from the preprocessed audio
+    audio_features = preprocess.getMFCC(testX)
 
-    tests_new = []
-    for i in range(len(tests)):
-        for j in range(len(tests[i][0])):
-            tests_new.append(tests[i][0][j])
+    # Reshape the features if necessary (according to your model's input shape)
+    audio_features = audio_features.reshape(1, -1)  # Reshape to (1, feature_dim)
 
-    test_results = []
-    for i in range(11410):
-        if i >= 11401:
-            test_results.append(tests_new[i-11401])
-        else:
-            test_results.append(None)
+    # Feed the features to the trained model and obtain the prediction
+    prediction = model.predict(audio_features)
+
+    # Interpret the prediction
+    print("Predicted word:", labels[np.argmax(prediction)])
