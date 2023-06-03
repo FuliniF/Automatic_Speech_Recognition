@@ -22,12 +22,16 @@ def getLabel(path = DATA_PATH):
 def wav2fbank(filePath):
     # load data
     sampleRate, signal = wavfile.read(filePath)
-    maxFrameLen = sampleRate
+    maxFrameLen = int(sampleRate)
     signal = signal[0 : int(sampleRate)]
     # print(type(signal))
     # print("original len : ", len(signal), maxFrameLen)
     # print(np.zeros(maxFrameLen - len(signal)))
-    signal = np.append(signal, np.zeros(maxFrameLen - len(signal)))
+    if len(signal) < maxFrameLen:
+        add0 = maxFrameLen - len(signal)
+        # print(add0)
+        signal = np.append(signal, np.zeros(add0))
+        # print(len(signal))
     # print("frame len : ", len(signal), "frame : ", signal)
     # os.system("pause")
 
@@ -285,3 +289,5 @@ def getBatchWindow(dataset):
 # # print(testX[0].shape, testX[300].shape, max(testX[i].shape[0] for i in range(len(testX))) == min(testX[i].shape[0] for i in range(len(testX))))
 # print(testY.shape)
 # print(imbed)
+# mfcc = getMFCC("./audio/test0.wav")
+# print(mfcc)

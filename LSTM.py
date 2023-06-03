@@ -2,6 +2,7 @@ import tensorflow.compat.v1 as tf
 import preprocess
 tf.disable_v2_behavior()
 import numpy as np
+import os
 
 # function "getCell"
 """
@@ -65,6 +66,8 @@ step:
 2. 
 """
 def opt_loss(output, targets, learning_rate):
+    print("output :", output)
+    print("targets :", targets)
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits = output, labels = targets), name = 'loss')
     optimizer = tf.train.AdamOptimizer(learning_rate)
 
@@ -77,10 +80,10 @@ def opt_loss(output, targets, learning_rate):
 
 class RecognitionRNN(object):
     
-    def __init__(self, batch_size, window_size, imbed_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
+    def __init__(self, batch_size, window_size, learning_rate=0.8, hidden_layer_size=512, number_of_layers=2, 
                  dropout=True, keep_prob=0.8, size=1, gradient_clip_margin=4):
-        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, imbed_size], name='input_data')
-        self.targets = tf.placeholder(tf.float32, [batch_size, 1], name='targets')
+        self.inputs = tf.placeholder(tf.float32, [batch_size, window_size, 1], name='input_data')
+        self.targets = tf.placeholder(tf.float32, [batch_size, size], name='targets')
 
         # cell, init_state = LSTMCell(hidden_layer_size, batch_size, number_of_layers, dropout, keep_prob)
         cell, init_state = LSTMCell(numNeuron, self.inputs, len(numNeuron), keep_prob)
@@ -90,6 +93,7 @@ class RecognitionRNN(object):
         self.logits = outLayer(outputs, size)
 
         self.loss, self.opt = opt_loss(self.logits, self.targets, learning_rate)
+        # os.system("pause")
 
 
 if __name__ == "__main__":
@@ -98,7 +102,7 @@ if __name__ == "__main__":
     # print("feature complete")
     numNeuron = [128, 64]
     trainX, testX, trainY, testY = preprocess.getTrainTest("mfcc")
-    batchSize, windowSize, imbedSize = preprocess.getBatchWindow(trainX)
+    epochs, batchSize, windowSize = preprocess.getBatchWindow(trainX)
     # print("trainX : ", trainX.shape)
     # x_input = tf.placeholder(tf.float32, [batchSize, windowSize, 2]) 
     # cell, init_state = LSTMCell(numNeuron, x_input, len(numNeuron), keep_prob)
@@ -108,7 +112,7 @@ if __name__ == "__main__":
     # y_out = tf.placeholder(tf.float32, [batchSize, 1])
     # loss, opt = opt_loss(preds, y_out, 0.8) 
 
-    model = RecognitionRNN(batchSize, windowSize, imbedSize)
+    model = RecognitionRNN(batchSize, windowSize)
 
     # with tf.Session() as sess:
     #     sess.run(tf.global_variables_initializer())
@@ -135,22 +139,24 @@ if __name__ == "__main__":
 
     session =  tf.Session()
     session.run(tf.global_variables_initializer())
-    epochs = 10
+    epochs = 1000
     for i in range(epochs):
         traind_scores = []
         ii = 0
         epoch_loss = []
-        while(ii + batchSize) <= len(trainX):
-            X_batch = trainX[ii:ii+batchSize]
-            y_batch = trainY[ii:ii+batchSize]
+        # for i in range(batchSize):
+            # X_batch = trainX[ii:ii+batchSize]
+            # y_batch = trainY[ii:ii+batchSize]
         
-            o, c, _ = session.run([model.logits, model.loss, model.opt], feed_dict={model.inputs:X_batch, model.targets:y_batch})
-        
-            epoch_loss.append(c)
-            traind_scores.append(o)
-            ii += batchSize
-        
-        print('Epoch {}/{}'.format(i, epochs), ' Current loss: {}'.format(np.mean(epoch_loss)))
+        o, c, _ = session.run([model.logits, model.loss, model.opt], feed_dict={model.inputs:trainX[i], model.targets:trainY[i]})
+        # print("o : ", o, "c : ", c)
+        # os.system("pause")
+
+        epoch_loss.append(c)
+        traind_scores.append(o)
+        # ii += batch_size
+        if i % 100 == 0:
+            print('Epoch {}/{}'.format(i, epochs), ' Current loss: {}'.format(np.mean(epoch_loss)))
 
     # Define the class labels
     labels = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'up', 'down']
@@ -166,4 +172,5 @@ if __name__ == "__main__":
     prediction = session.run([model.logits], feed_dict={model.inputs:audio_features})
 
     # Interpret the prediction
-    print("Predicted word:", labels[np.argmax(prediction)])
+    print("Predicted word:", prediction)
+    session.close()

@@ -23,7 +23,7 @@ def openWindow():
 
 def voiceDetect(filename, savePath = "./audio/", 
                 chunk = 1024, sample_format = pyaudio.paInt16, 
-                channels = 2, fs = 44100, seconds = 5):
+                channels = 1, fs = 16000, seconds = 5):
     """
     Press any key to record the voice with a microphone and generate a wav file.
 
@@ -59,26 +59,26 @@ def voiceDetect(filename, savePath = "./audio/",
     p.terminate()
     print("end recording")
 
-    wf = wave.open(savePath + filename + ".wav", 'wb')
+    wf = wave.open(savePath + "original.wav", 'wb')
     wf.setnchannels(channels)
     wf.setsampwidth(p.get_sample_size(sample_format))
     wf.setframerate(fs)
     wf.writeframes(b''.join(frames))
     wf.close()
 
-    region = auditok.load(savePath + filename + ".wav")
+    region = auditok.load(savePath + "original.wav")
     splited = region.split(min_dur = 0.3, max_dur = 1.0, max_silence = 0.1, energy_threshold = 55)
     commands = []
     for i, r in enumerate(splited):
-        commands.append(r.save(savePath + "command_" + str(i) + ".wav"))
+        commands.append(r.save(savePath + filename + str(i) + ".wav"))
 
-    return os.listdir(savePath)
+
+    return commands
 
 def closeWindow():
     """
     Close the image.
     """
-
     cv2.destroyAllWindows()
 
 def floorChoose(img, floor):
@@ -105,11 +105,16 @@ def floorChoose(img, floor):
     cv2.imshow("elevator", img)
     return
 
+def wait():
+    cv2.waitKey(0)
+    os.remove("./audio/original.wav")
+    return
+
 
 # test
-img = openWindow()
-filepath = voiceDetect("test")
-print(filepath)
-floorChoose(img, 4)
-cv2.waitKey(0)
-closeWindow()
+# img = openWindow()
+# filepath = voiceDetect("test")
+# print(filepath)
+# floorChoose(img, 4)
+# wait()
+# closeWindow()
