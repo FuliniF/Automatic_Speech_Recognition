@@ -24,27 +24,27 @@ if __name__ == "__main__":
 
     # Adding the LSTM layers and some Dropout regularisation
     model.add(LSTM(units = 50, return_sequences = True, input_shape = (windowSize,imbedSize)))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.25))
     model.add(LSTM(units = 50, return_sequences = True))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.25))
     model.add(LSTM(units = 50, return_sequences = True))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.25))
     model.add(LSTM(units = 50))
-    model.add(Dropout(0.2))
+    model.add(Dropout(0.25))
 
     # Adding the output layer
-    model.add(Dense(units = 12))
+    model.add(Dense(units = 1))
 
     # Compile & train & predict
     ii = 0
-    batch = 1000
-    while (ii+batch) <= trainX.shape[0] / 2:
+    batch = 114
+    while (ii+batch) <= trainX.shape[0]:
         print("current iteration:", ii/batch)
         backend.clear_session()
         X_batch = trainX[ii:ii+batch]
         Y_batch = trainY[ii:ii+batch]
         model.compile(optimizer = 'adam', loss = 'mean_squared_error')
-        model.fit(X_batch, Y_batch, epochs = 1, batch_size = batch)
+        model.fit(X_batch, Y_batch, epochs = 200, batch_size = batch)
         ii += batch
     # backend.clear_session()
     # model.compile(optimizer = 'adam', loss = 'mean_squared_error')
@@ -82,7 +82,7 @@ if __name__ == "__main__":
             test = np.vstack((testX[0 : 599], audioFeature))
             predict = model.predict(test)
             
-        print(predict.shape)
+        # print(predict.shape)
         max_index = 0
         for i in range(predict.shape[1]):
             if predict[599][i] > max_pred:
@@ -90,8 +90,12 @@ if __name__ == "__main__":
                 max_index = j
         if max_index in range(1, 10):
             elevator.floorChoose(img, max_index)
-        else:
-            print(max_index)
+        elif max_index == 0:
+            print("zero")
+        elif max_index == 10:
+            print("up")
+        elif max_index == 11:
+            print("down")
         
         os.remove(c)
     
