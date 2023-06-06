@@ -14,20 +14,40 @@ class Embedding(nn.Module):
 
         return x
 
-
-class ResidualBlock(nn.Module):
+class LSTMBlock(nn.Module):
     def __init__(self, num_channels):
-        super(ResidualBlock, self).__init__()
+        super(LSTMBlock, self).__init__()
+        self.batch_size = 200
+        self.length = 99
+        self.input_dim = 2
+        self.hidden_dim = 12
+        self.num_layers = 1
+        self.rearrangev = Rearrange('b c h w -> b (h w) c')
+
+        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers, batch_first=True)
+        self.linear = nn.Linear(self.hidden_dim, 12)
+
+    def forward(self, x):
+        input_data = self.rearrangev(x)
+        linear_layer = nn.Linear(12,2)
+        lin_input = linear_layer(input_data)
+
+        x, _ = self.lstm(lin_input)
+        x = self.linear(x[:,-1,:])
+
+        return x
+
+class ConvBlock(nn.Module):
+    def __init__(self, num_channels):
+        super(ConvBlock, self).__init__()
         self.conv1 = nn.Conv2d(num_channels, num_channels*16, (3,1), padding=1)
         self.bn1 = nn.BatchNorm2d(num_channels*16)
         self.conv2 = nn.Conv2d(num_channels*16, num_channels*16, (3,1), padding=1)
         self.bn2 = nn.BatchNorm2d(num_channels*16)
         self.conv3 = nn.Conv2d(num_channels*16, num_channels, (3,1), padding=1)
         self.bn3 = nn.BatchNorm2d(num_channels)
-        print("Residual Block")
 
     def forward(self, x):
-        input = x
         x = self.conv1(x)
         x = self.bn1(x)
         x = F.relu(x)
@@ -36,9 +56,9 @@ class ResidualBlock(nn.Module):
         x = F.relu(x)
         x = self.conv3(x)
         x = self.bn3(x)
-        # x = F.relu(x)
-        return x
 
+        return x
+   
 class ValueHead(nn.Module):
     def __init__(self, length, channel, label_num):
         super(ValueHead, self).__init__()
@@ -55,36 +75,38 @@ class ValueHead(nn.Module):
         x = F.relu(x)
         x = self.fc2(x)
         x = self.sigmoid(x)
-        
         return x
-    
-class fcmodel1(nn.Module):
+
+class ValueHead_lstm(nn.Module):
     def __init__(self, length, channel, label_num):
-        super(fcmodel1, self).__init__()
-        self.emb = Embedding()
-        self.net = ResidualBlock(channel)
-        self.val = ValueHead(length, channel, label_num)
+        super(ValueHead_lstm, self).__init__()
+        output_channel = 105*channel
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.emb(x)
-        x = self.net(x)
-        x = self.val(x)
-        
+        x = self.sigmoid(x)
         return x
+    
+class model1(nn.Module):
+    def __init__(self, length, channel, label_num):
+        super(model1, self).__init__()
+        self.emb = Embedding()
+        '''
+        To change network structure:
+        change self.net and self.val
+        '''
+        self.net = ConvBlock(channel)
+        # self.net = LSTMBlock(channel)
+        self.val = ValueHead(length, channel, label_num)
+        # self.val = ValueHead_lstm(length, channel, label_num)
 
+    def forward(self, x):
+        # B, 99, 12
+        # B, c, h, w
+        x = self.emb(x)
+        # B, 12, 1, 99
+        x = self.net(x)
+        # 12 classes
+        x = self.val(x)
 
-# inp = torch.rand(1, 99, 12)
-
-# net = ResidualBlock(12)
-# emb = Embedding()
-# val = ValueHead(105, 12, 12)
-
-# network = fcmodel1(99, 12, 12)
-
-# print(network(inp))
-# inp = emb(inp)
-# print(inp.shape)
-# inp = net(inp)
-# print(inp.shape)
-# inp = val(inp)
-# print(inp.shape)
+        return x
