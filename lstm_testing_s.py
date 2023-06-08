@@ -8,35 +8,32 @@ from torch.utils.data import DataLoader
 
 from tqdm import tqdm
 
-from model import model1
+from model import model_conv, model_lstm
 import numpy as np
 import preprocess
 import plot
 
-
+# get dataset with desired type
 class SpeechDataset(Dataset):
     def __init__(self, inputdata, label):
-        #11400 99 12
         self.inputdata = inputdata
-        #11400 1
         self.label = label
 
     def __len__(self):
         return len(self.inputdata)
 
     def __getitem__(self, idx):
-        # 99 12
         features = torch.FloatTensor(self.inputdata[idx])
-        # 1
         label = torch.LongTensor(self.label[idx])
 
         return features, label
 
-
+# loss function: use cross entropy
 def get_loss(label, output):
     loss = F.cross_entropy(output, label.view(-1))
     return loss
  
+# accuracy: use argmax & calculate num of correct prediction
 def get_acc(label, output):
     pred = torch.argmax(output, dim=1)
     label = label.view(-1)
@@ -45,21 +42,23 @@ def get_acc(label, output):
     return acc_sum
 
 if __name__ == "__main__":
+    print("------LSTM with torch model------")
     # preprocess.save_data()
     featureType = "mfcc"
     trainX, testX, trainY, testY = preprocess.getTrainTest(featureType)
+
+    # use DataLoader to batch and shuffle the data
     train_dataset = SpeechDataset(trainX, trainY)
     train_data_loader = DataLoader(
         train_dataset, batch_size=200, num_workers=2, shuffle=True)
-    
 
     test_dataset = SpeechDataset(testX, testY)
     test_data_loader = DataLoader(
         test_dataset, batch_size=200, num_workers=2, shuffle=False)
-    
 
-
-    network = model1(99, 12, 12)
+    # call models from model.py
+    network = model_lstm(99, 12, 12)
+    # network = model_conv(99, 12, 12)
     optimizer = optim.SGD(network.parameters(),
                           lr=0.1)
     

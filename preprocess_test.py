@@ -24,9 +24,16 @@ def wav2fbank(filePath):
     sampleRate, signal = wavfile.read(filePath)
     maxFrameLen = int(sampleRate)
     signal = signal[0 : int(sampleRate)]
+    # print(type(signal))
+    # print("original len : ", len(signal), maxFrameLen)
+    # print(np.zeros(maxFrameLen - len(signal)))
     if len(signal) < maxFrameLen:
         add0 = maxFrameLen - len(signal)
+        # print(add0)
         signal = np.append(signal, np.zeros(add0))
+        # print(len(signal))
+    # print("frame len : ", len(signal), "frame : ", signal)
+    # os.system("pause")
 
     # pre-emphasis
     preEmphasis = 0.97
@@ -233,6 +240,9 @@ def getTrainTest(feature_type):
             an array storing labels of testX
     """
 
+    # labels, _, _ = getLabel()
+    # np.random.seed(seed)
+
     trainX = np.load(SAVE_PATH + "trainX_" + feature_type + '.npy', allow_pickle=True)
     testX = np.load(SAVE_PATH + "testX_" + feature_type + '.npy', allow_pickle=True)
     trainY = np.load(SAVE_PATH + "trainY.npy", allow_pickle=True)
@@ -267,3 +277,17 @@ def getBatchWindow(dataset):
     """
 
     return len(dataset), len(dataset[0]), dataset.shape[2]
+
+# compute features
+# save_data()
+
+# test
+# feature_type = "fbank"
+# save_data()
+# trainX, testX, trainY, testY = getTrainTest(feature_type)
+# _, window, imbed = getBatchWindow(testX)
+# # print(testX[0].shape, testX[300].shape, max(testX[i].shape[0] for i in range(len(testX))) == min(testX[i].shape[0] for i in range(len(testX))))
+# print(testY.shape)
+# print(imbed)
+# mfcc = getMFCC("./audio/test0.wav")
+# print(mfcc)

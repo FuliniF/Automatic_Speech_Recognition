@@ -6,13 +6,12 @@ from keras import backend
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-# from sklearn.preprocessing import MinMaxScaler
 import preprocess
 import elevator
 import os
 
 if __name__ == "__main__":
-    print("--------------------------------------------------------")
+    print("------LSTM with keras model------")
     # preprocess.save_data()
     featureType = "mfcc"
     trainX, testX, trainY, testY = preprocess.getTrainTest(featureType)
@@ -35,9 +34,9 @@ if __name__ == "__main__":
     # Adding the output layer
     model.add(Dense(units = 1))
 
-    # Compile & train & predict
+    # Compile & train
     ii = 0
-    batch = 114
+    batch = 100
     while (ii+batch) <= trainX.shape[0]:
         print("current iteration:", ii/batch)
         backend.clear_session()
@@ -46,10 +45,8 @@ if __name__ == "__main__":
         model.compile(optimizer = 'adam', loss = 'mean_squared_error')
         model.fit(X_batch, Y_batch, epochs = 200, batch_size = batch)
         ii += batch
-    # backend.clear_session()
-    # model.compile(optimizer = 'adam', loss = 'mean_squared_error')
-    # model.fit(np.array(trainX), np.array(trainY), epochs = 5, batch_size = 100)
 
+    # predict
     predicted = model.predict(testX)
     print(testX.shape)
     print(predicted.shape)
@@ -64,10 +61,10 @@ if __name__ == "__main__":
                 max_index = j
         if max_index == testY[i]:
             correct += 1
-        # print("test", i, ":", max_index)
     print("correct: ", correct)
     print("accuracy:", correct/600)
 
+    # connect to UI & real audio recording test
     img = elevator.openWindow()
     command = elevator.voiceDetect("test")
     for c in command:

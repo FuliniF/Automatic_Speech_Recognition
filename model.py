@@ -86,27 +86,35 @@ class ValueHead_lstm(nn.Module):
     def forward(self, x):
         x = self.sigmoid(x)
         return x
-    
-class model1(nn.Module):
+
+'''
+model_lstm: experimental group, use lstm layer as main model
+model_conv: control group, use convolutional layer as main model
+'''
+class model_lstm(nn.Module):
     def __init__(self, length, channel, label_num):
         super(model1, self).__init__()
         self.emb = Embedding()
-        '''
-        To change network structure:
-        change self.net and self.val
-        '''
-        self.net = ConvBlock(channel)
-        # self.net = LSTMBlock(channel)
-        self.val = ValueHead(length, channel, label_num)
-        # self.val = ValueHead_lstm(length, channel, label_num)
+        self.net = LSTMBlock(channel)
+        self.val = ValueHead_lstm(length, channel, label_num)
 
     def forward(self, x):
-        # B, 99, 12
-        # B, c, h, w
         x = self.emb(x)
-        # B, 12, 1, 99
         x = self.net(x)
-        # 12 classes
+        x = self.val(x)
+
+        return x
+
+class model_conv(nn.Module):
+    def __init__(self, length, channel, label_num):
+        super(model1, self).__init__()
+        self.emb = Embedding()
+        self.net = ConvBlock(channel)
+        self.val = ValueHead(length, channel, label_num)
+
+    def forward(self, x):
+        x = self.emb(x)
+        x = self.net(x)
         x = self.val(x)
 
         return x
