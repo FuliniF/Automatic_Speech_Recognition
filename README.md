@@ -2,7 +2,8 @@
 ### 2023 Spring, Introduction to Artificial Intelligence
 National Yang Ming Chiao Tung University  
 Final Project, Group 26  
-Professor: Yi-Ting, Chen
+Professor: Yi-Ting, Chen  
+For more information of this project, please check our report and slides.
 
 Dataset source : https://www.kaggle.com/competitions/tensorflow-speech-recognition-challenge/data
 
